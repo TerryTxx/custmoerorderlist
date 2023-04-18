@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>order</title>
+    <link rel="stylesheet" href="./static/bootstrap.min.css">
+    <link rel="stylesheet" href="./static/jquery-ui.min.css">
+    <script src="./static/jquery.min.js"></script>
+    <script src="./static/bootstrap.min.js"></script>
+    <script src="./static/jquery-ui.min.js"></script>
+    <style>
+        .text-red{
+            color: red;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Order List</h1>
+    <p>
+        <div class="table-header">
+            <div class="myText-content">
+                <input id="keyword" value="" type="text" class="form-control" placeholder="OrderId">
+            </div>
+        </div>
+        <div class="table-header-btn">
+            <button id="create-btn" class="btn btn-success">Create Order</button>
+        </div>
+    </p>
+    <table id="order-table" class="table">
+        <thead>
+        <tr>
+            <th>Order Id</th>
+<!--            <th>User Id</th>-->
+            <th>Total Item</th>
+            <th>Total Price</th>
+            <th></th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- Form Modal -->
+<div id="form-modal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="form-modal-title"></h4>
+            </div>
+            <div class="modal-body">
+                <form id="form">
+                    <div class="form-group">
+                        <input type="hidden" class="form-control" id="userId" name="userId" placeholder="require">
+                    </div>
+                    <!-- Add row data dynamically Each row of sub-orders -->
+                    <div>
+                        <div class="table-header-btn">
+                            <button id="create-item-btn" type="button" class="btn btn-success">Add Goods</button>
+                        </div>
+                        <table id="order-item-table" class="table">
+                            <thead>
+                            <tr>
+                                <th></th>
+                                <th>Model</th>
+                                <th>Manufacturer</th>
+                                <th>Price</th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <input type="hidden" id="form-modal-action" name="action" value="">
+                    <input type="hidden" id="id" name="id" value="">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button id="form-submit-btn" type="button" class="btn btn-primary">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+
+<script>
+    // Load order data from
+    function loadorder() {
+        $.ajax({
+            url: "/api/order.php?action=read&userId=" + $("#userId").val(),
+            type: "GET",
+            data: {
+                keyword:$('#keyword').val()
+            },
+            success: function(data) {
+                var orderList = JSON.parse(data);
+                var table = $("#order-table tbody");
+                table.empty();
+                if(orderList.length){
+                    for (var i = 0; i < orderList.length; i++) {
+                        var order = orderList[i];
+                        var row = "<tr>";
+                        // row += "<td>" + order.userId + "</td>";
+                        row += "<td>" + order._id + "</td>";
+                        row += "<td>" + order.totalItem + "</td>";
+                        row += "<td>" + order.totalPrice + "</td>";
+                        row += "<td><button class='btn btn-primary edit-btn' data-id='" + order._id + "'>Edit</button></td>";
+                        row += "<td><button class='btn btn-danger delete-btn' data-id='" + order._id + "'>Delete</button></td>";
+                        row += "</tr>";
+                        table.append(row);
+                    }
+                }
+            },
+            error: function() {
+                alert("Failed to load orderList");
+            }
+        });
+    }
+
+    // Load goods data from
+    var goodsOptions = [];
+    function getGoodsList() {
+        $.ajax({
+            url: "/api/goods.php?action=read",
+            type: "GET",
+            data: {},
+            success: function(data) {
+                var orderList = JSON.parse(data);
+                if(orderList.length){
+                    goodsOptions = orderList;
+                }
+            },
+            error: function() {
+                alert("Failed to load orderList");
+            }
+        });
+    }
+
+    $('#search').click(function (){
+        loadorder();
+    })
+
+    $('#create-item-btn').click(function() {
+        var html = '<tr>' +
+            '<td><select name="_id[]" class="form-control"><option value="">Please select a model</option></select></td>' +
+            '<td><input type="text" name="model[]" class="form-control" disabled /></td>' +
+            '<td><input type="text" name="manufacturer[]" class="form-control" disabled /></td>' +
+            '<td><input type="text" name="price[]" class="form-control" disabled /></td>' +
+            '<td><button type="button" class="btn btn-danger delete-row">Remove</button></td></tr>';
+        $('#order-item-table tbody').append(html);
+
+        var select = $('#order-item-table tbody tr:last-child select');
+        for (var i = 0; i < goodsOptions.length; i++) {
+            select.append('<option value="' + goodsOptions[i]._id + '">' + goodsOptions[i].model + '</option>');
+        }
+
+        // select.change(function() {
+        //     var tr = $(this).closest('tr');
+        //     var model = tr.find('input[name="model[]"]');
+        //     var manufacturer = tr.find('input[name="manufacturer[]"]');
+        //     var price = tr.find('input[name="price[]"]');
+        //     var option = $(this).find(':selected');
+        //     var index = option.index()-1;
+        //     if (goodsOptions[index] == undefined){
+        //         model.val('');
+        //         manufacturer.val('');
+        //         price.val('');
+        //     }else{
+        //         model.val(goodsOptions[index].model);
+        //         manufacturer.val(goodsOptions[index].manufacturer);
+        //         price.val(goodsOptions[index].price);
+        //     }
+        // });
+    });
+
+    $(document).on('change', 'select[name="_id[]"]', function() {
+        // console.log('chagen')
+        var tr = $(this).closest('tr');
+        var model = tr.find('input[name="model[]"]');
+        var manufacturer = tr.find('input[name="manufacturer[]"]');
+        var price = tr.find('input[name="price[]"]');
+        var option = $(this).find(':selected');
+        var index = option.index()-1;
+        if (goodsOptions[index] == undefined){
+            model.val('');
+            manufacturer.val('');
+            price.val('');
+        }else{
+            model.val(goodsOptions[index].model);
+            manufacturer.val(goodsOptions[index].manufacturer);
+            price.val(goodsOptions[index].price);
+        }
+    });
+    $(document).on('click', '.delete-row', function() {
+        $(this).closest('tr').remove();
+    });
+
+    // Clear form fields
+    function clearForm() {
+        $('#order-item-table tbody').empty();
+    }
+
+    // Show form modal
+    function showFormModal(title, action, order) {
+        $("#form-modal-title").text(title);
+        $("#form-modal-action").val(action);
+        if (order) {
+            $("#id").val(order._id);
+            $("#userId").val(order.userId);
+
+            var goodsArr = order.goodsArr;
+            $('#order-item-table tbody').empty();
+            for (var j = 0; j < goodsArr.length; j++) {
+                var goods = order.goodsArr[j];
+
+                var select = '<td><select name="_id[]" class="form-control"><option value="">Please select a model</option>';
+                $.each(goodsOptions, function(index, value) {
+                    if (value._id == goods._id){
+                        select += '<option value="'+value._id+'" selected>'+value.model+'</option>';
+                    }else{
+                        select += '<option value="'+value._id+'">'+value.model+'</option>';
+                    }
+                });
+                select+='</select></td></td>';
+                var html = '<tr>' +
+                    select +
+                    '<td><input type="text" name="model[]" class="form-control" disabled value="' + goods.model + '" /></td>' +
+                    '<td><input type="text" name="manufacturer[]" class="form-control" disabled value="' + goods.manufacturer + '" /></td>' +
+                    '<td><input type="text" name="price[]" class="form-control" disabled value="' + goods.price + '" /></td>' +
+                    '<td><button type="button" class="btn btn-danger delete-row">Remove</button></td></tr>';
+                $('#order-item-table tbody').append(html);
+            }
+        } else {
+            clearForm();
+        }
+        $("#form-modal").modal("show");
+    }
+
+    // Submit form data
+    function submitForm() {
+        var action = $("#form-modal-action").val();
+
+        var rows = $('#order-item-table tbody tr');
+        var goodsArr = [];
+        rows.each(function() {
+            var row = $(this);
+            var goods_id = row.find('select[name="_id[]"]').val();
+
+            if (goods_id !== null && goods_id !== '') {
+                goodsArr.push({
+                    _id: goods_id,
+                    model: row.find('input[name="model[]"]').val(),
+                    manufacturer: row.find('input[name="manufacturer[]"]').val(),
+                    price: row.find('input[name="price[]"]').val()
+                });
+            }
+        });
+
+        var data = {
+            userId: $("#userId").val(),
+            goodsArr:goodsArr
+        };
+
+        if (action === "create") {
+            $.ajax({
+                url: "/api/order.php?action=create",
+                type: "POST",
+                data: data,
+                success: function(res) {
+                    var res = JSON.parse(res);
+                    if (res.code == 1){
+                        $("#form-modal").modal("hide");
+                        loadorder();
+                    }else{
+                        alert(res.msg);
+                    }
+                },
+                error: function() {
+                    alert("Failed to create order");
+                }
+            });
+        } else if (action === "update") {
+            data.id = $("#id").val();
+            $.ajax({
+                url: "/api/order.php?action=update",
+                type: "POST",
+                data: data,
+                success: function(res) {
+                    var res = JSON.parse(res);
+                    if (res.code == 1){
+                        $("#form-modal").modal("hide");
+                        loadorder();
+                    }else{
+                        alert(res.msg);
+                    }
+                },
+                error: function() {
+                    alert("Failed to update order");
+                }
+            });
+        }
+    }
+
+    // Delete order
+    function deleteOrder(id) {
+        $.ajax({
+            url: "/api/order.php?action=delete",
+            type: "POST",
+            data: {id: id},
+            success: function() {
+                loadorder();
+            },
+            error: function() {
+                alert("Failed to delete order");
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        var searchParams = new URLSearchParams(window.location.search);
+        var userId = searchParams.get('userId');
+        $("#userId").val(userId);
+
+        // Load order on page load
+        loadorder();
+        getGoodsList();
+
+        // Show create form modal
+        $("#create-btn").click(function() {
+            showFormModal("Create Order", "create");
+        });
+
+        // Show edit form modal
+        $(document).on("click", ".edit-btn", function() {
+            var id = $(this).attr("data-id");
+            $.ajax({
+                url: "/api/order.php?action=readOne",
+                type: "GET",
+                data: {id: id},
+                success: function(data) {
+                    var order = JSON.parse(data);
+                    showFormModal("Edit Order", "update", order);
+                },
+                error: function() {
+                    alert("Failed to load order");
+                }
+            });
+        });
+
+        // Submit form data
+        $("#form-submit-btn").click(function() {
+            submitForm();
+        });
+
+        // Delete order
+        $(document).on("click", ".delete-btn", function() {
+            var id = $(this).attr("data-id");
+            if (confirm("Are you sure you want to delete this order?")) {
+                deleteOrder(id);
+            }
+        });
+    });
+</script>
+<style>
+    .table-header {
+        float: left;
+        display: inline-block;
+        margin-right:30px;
+    }
+    .table-header-btn .btn {
+        margin-bottom: 10px;
+    }
+</style>
+</html>

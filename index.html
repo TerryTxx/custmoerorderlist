@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>customer</title>
+    <link rel="stylesheet" href="./static/bootstrap.min.css">
+    <link rel="stylesheet" href="./static/jquery-ui.min.css">
+    <script src="./static/jquery.min.js"></script>
+    <script src="./static/bootstrap.min.js"></script>
+    <script src="./static/jquery-ui.min.js"></script>
+    <style>
+        .text-red{
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Customer List</h1>
+    <p>
+        <div class="table-header">
+            <div class="myText-content">
+                <input id="keyword" value="" type="text" class="form-control" placeholder="Title Or First Name Or Last Name">
+            </div>
+        </div>
+        <div class="table-header-btn">
+            <button id="search" type="button" class="btn btn-primary">Search</button>
+            <button id="show-goods-btn" class="btn btn-success">Show Goods</button>
+            <button id="create-btn" class="btn btn-success">Create Contact</button>
+        </div>
+    </p>
+    <table id="customer-table" class="table">
+        <thead>
+        <tr>
+            <th>User Id</th>
+            <th>Title</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th></th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<!-- Form Modal -->
+<div id="form-modal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="form-modal-title"></h4>
+            </div>
+            <div class="modal-body">
+                <form id="form">
+                    <div class="form-group">
+                        <label for="title">Title:</label>
+                        <select id="title" name="title" class="form-control">
+                            <option value="Ms" selected>Mr</option>
+                            <option value="Mr" selected>Mx</option>
+                            <option value="Miss">Miss</option>
+                            <option value="Mrs">Mrs</option>
+                            <option value="Dr">Mrs</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="first-name"><span class="text-red">*</span>First Name:</label>
+                        <input type="text" class="form-control" id="first-name" name="firstName" placeholder="require">
+                    </div>
+                    <div class="form-group">
+                        <label for="last-name"><span class="text-red">*</span>Last Name:</label>
+                        <input type="text" class="form-control" id="last-name" name="lastName" placeholder="require">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone"><span class="text-red">*</span></span>Phone:</label>
+                        <input type="text" class="form-control" id="phone" name="phone" placeholder="require">
+                    </div>
+                    <div class="form-group">
+                        <label for="email"><span class="text-red">*</span></span>Email:</label>
+                        <input type="text" class="form-control" id="email" name="email" placeholder="require">
+                    </div>
+                    <input type="hidden" id="form-modal-action" name="action" value="">
+                    <input type="hidden" id="id" name="id" value="">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button id="form-submit-btn" type="button" class="btn btn-primary">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+<!-- Order Page And Address Page-->
+<div id="openDialog"></div>
+
+<script>
+    // Load customer data from
+    function loadcustomer() {
+        $.ajax({
+            url: "/api/customer.php?action=read",
+            type: "GET",
+            data: {
+                keyword:$('#keyword').val()
+            },
+            success: function(data) {
+                var customerList = JSON.parse(data);
+                var table = $("#customer-table tbody");
+                table.empty();
+                if(customerList.length){
+                    for (var i = 0; i < customerList.length; i++) {
+                        var contact = customerList[i];
+                        var row = "<tr>";
+                        row += "<td>" + contact._id + "</td>";
+                        row += "<td>" + contact.title + "</td>";
+                        row += "<td>" + contact.firstName + "</td>";
+                        row += "<td>" + contact.lastName + "</td>";
+                        row += "<td>" + contact.phone + "</td>";
+                        row += "<td>" + contact.email + "</td>";
+                        row += "<td><button class='btn btn-primary edit-btn' data-id='" + contact._id + "'>Edit</button></td>";
+                        row += "<td><button class='btn btn-primary address-btn' data-toggle='modal' data-url='/address.html?userId="+contact._id+"' data-title='"+contact.title+"' data-firstname='"+contact.firstName+"'>Address</button></td>";
+                        row += "<td><button class='btn btn-primary orders-btn' data-toggle='modal' data-url='/order.html?userId="+contact._id+"' data-title='"+contact.title+"' data-firstname='"+contact.firstName+"'>Orders</button></td>";
+                        row += "<td><button class='btn btn-danger delete-btn' data-id='" + contact._id + "'>Delete</button></td>";
+                        row += "</tr>";
+                        table.append(row);
+                    }
+                }
+            },
+            error: function() {
+                alert("Failed to load customerList");
+            }
+        });
+    }
+
+    $('#search').click(function (){
+        loadcustomer();
+    })
+
+    // Clear form fields
+    function clearForm() {
+        // $("#title").val("");
+        $("#title option[value='Mr']").prop("selected", true);
+        $("#first-name").val("");
+        $("#last-name").val("");
+        $("#phone").val("");
+        $("#email").val("");
+    }
+
+    // Show form modal
+    function showFormModal(title, action, contact) {
+        $("#form-modal-title").text(title);
+        $("#form-modal-action").val(action);
+        if (contact) {
+            $("#id").val(contact._id);
+            $("#title option[value="+contact.title+"]").prop("selected", true);
+            $("#first-name").val(contact.firstName);
+            $("#last-name").val(contact.lastName);
+            $("#phone").val(contact.phone);
+            $("#email").val(contact.email);
+        } else {
+            clearForm();
+        }
+        $("#form-modal").modal("show");
+    }
+
+    // Submit form data
+    function submitForm() {
+        var action = $("#form-modal-action").val();
+        var data = {
+            title: $("#title").val(),
+            firstName: $("#first-name").val(),
+            lastName: $("#last-name").val(),
+            phone: $("#phone").val(),
+            email: $("#email").val()
+        };
+        if (data.firstName == "" || data.lastName == "" || data.phone == "" || data.email == "") {
+            alert("Please fill in all required fields.");
+            return;
+        }
+        if (action === "create") {
+            $.ajax({
+                url: "/api/customer.php?action=create",
+                type: "POST",
+                data: data,
+                success: function(res) {
+                    var res = JSON.parse(res);
+                    if (res.code == 1){
+                        $("#form-modal").modal("hide");
+                        loadcustomer();
+                    }else{
+                        alert(res.msg);
+                    }
+                },
+                error: function() {
+                    alert("Failed to create contact");
+                }
+            });
+        } else if (action === "update") {
+            data.id = $("#id").val();
+            $.ajax({
+                url: "/api/customer.php?action=update",
+                type: "POST",
+                data: data,
+                success: function(res) {
+                    var res = JSON.parse(res);
+                    if (res.code == 1){
+                        $("#form-modal").modal("hide");
+                        loadcustomer();
+                    }else{
+                        alert(res.msg);
+                    }
+                },
+                error: function() {
+                    alert("Failed to update contact");
+                }
+            });
+        }
+    }
+
+    // Delete contact
+    function deleteContact(id) {
+        $.ajax({
+            url: "/api/customer.php?action=delete",
+            type: "POST",
+            data: {id: id},
+            success: function() {
+                loadcustomer();
+            },
+            error: function() {
+                alert("Failed to delete contact");
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        // Load customer on page load
+        loadcustomer();
+
+        // Show create form modal
+        $("#create-btn").click(function() {
+            showFormModal("Create Contact", "create");
+        });
+
+        // Show edit form modal
+        $(document).on("click", ".edit-btn", function() {
+            var id = $(this).attr("data-id");
+            $.ajax({
+                url: "/api/customer.php?action=readOne",
+                type: "GET",
+                data: {id: id},
+                success: function(data) {
+                    var contact = JSON.parse(data);
+                    showFormModal("Edit Contact", "update", contact);
+                },
+                error: function() {
+                    alert("Failed to load contact");
+                }
+            });
+        });
+
+        var $iframe = $('<iframe>', {
+            frameborder: 0,
+            scrolling: 'auto',
+            width: '100%',
+            height: 800,
+        });
+        var openUrl = "";
+        var openTitle = "";
+        $('#openDialog').dialog({
+            autoOpen: false,
+            title: openTitle,
+            modal: true,
+            resizable: false,
+            width: '90%',
+            height: 800,
+            open: function() {
+                $iframe.attr('src', openUrl);
+                $('#openDialog').append($iframe);
+            },
+            close: function() {
+                $iframe.remove();
+            }
+        });
+
+        $('#show-goods-btn').click(function (){
+            openTitle = 'Goods List';
+            openUrl = "./goods.html";
+            $('#openDialog').dialog('open');
+        })
+        $(document).on("click", ".orders-btn", function() {
+            var title = $(this).attr("data-title");
+            var firstname = $(this).attr("data-firstname");
+            openTitle = title + " "+firstname+"'s Order";
+            openUrl = $(this).attr("data-url");
+            $('#openDialog').dialog('open');
+        });
+
+        $(document).on("click", ".address-btn", function() {
+            var title = $(this).attr("data-title");
+            var firstname = $(this).attr("data-firstname");
+            openTitle = title + " "+firstname+"'s Adress Detail";
+            openUrl = $(this).attr("data-url");
+            $('#openDialog').dialog('open');
+        });
+
+        // Submit form data
+        $("#form-submit-btn").click(function() {
+            submitForm();
+        });
+
+        // Delete contact
+        $(document).on("click", ".delete-btn", function() {
+            var id = $(this).attr("data-id");
+            if (confirm("Are you sure you want to delete this contact?")) {
+                deleteContact(id);
+            }
+        });
+    });
+</script>
+<style>
+    .table-header {
+        float: left;
+        display: inline-block;
+        margin-right:30px;
+    }
+    .table-header-btn .btn {
+        margin-bottom: 10px;
+    }
+    .ui-button .ui-icon {
+        background-image: url('./static/close.jpg');
+    }
+</style>
+</html>

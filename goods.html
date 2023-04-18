@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>goods</title>
+    <link rel="stylesheet" href="./static/bootstrap.min.css">
+    <link rel="stylesheet" href="./static/jquery-ui.min.css">
+    <script src="./static/jquery.min.js"></script>
+    <script src="./static/bootstrap.min.js"></script>
+    <script src="./static/jquery-ui.min.js"></script>
+    <style>
+        .text-red{
+            color: red;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Goods List</h1>
+    <p>
+    <div class="table-header">
+        <div class="myText-content">
+            <input id="keyword" value="" type="text" class="form-control" placeholder="Manufacturer Or Model Or Price">
+        </div>
+    </div>
+    <div class="table-header-btn">
+        <button id="search" type="button" class="btn btn-primary">Search</button>
+        <button id="create-btn" class="btn btn-success">Create Goods</button>
+    </div>
+    </p>
+    <table id="goods-table" class="table">
+        <thead>
+        <tr>
+            <th>Goods Id</th>
+            <th>Manufacturer</th>
+            <th>Model</th>
+            <th>Price</th>
+            <th></th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<!-- Form Modal -->
+<div id="form-modal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="form-modal-title"></h4>
+            </div>
+            <div class="modal-body">
+                <form id="form">
+                    <div class="form-group">
+                        <label for="manufacturer"><span class="text-red">*</span>Manufacturer:</label>
+                        <input type="text" class="form-control" id="manufacturer" name="manufacturer" placeholder="require">
+                    </div>
+                    <div class="form-group">
+                        <label for="model"><span class="text-red">*</span></span>Model:</label>
+                        <input type="text" class="form-control" id="model" name="model" placeholder="require">
+                    </div>
+                    <div class="form-group">
+                        <label for="price"><span class="text-red">*</span></span>Price:</label>
+                        <input type="text" class="form-control" id="price" name="price" placeholder="require">
+                    </div>
+                    <input type="hidden" id="form-modal-action" name="action" value="">
+                    <input type="hidden" id="id" name="id" value="">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button id="form-submit-btn" type="button" class="btn btn-primary">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+<!-- Order Page And Address Page-->
+<div id="openDialog"></div>
+
+<script>
+    // Load goods data from
+    function loadgoods() {
+        $.ajax({
+            url: "/api/goods.php?action=read",
+            type: "GET",
+            data: {
+                keyword:$('#keyword').val()
+            },
+            success: function(data) {
+                var goodsList = JSON.parse(data);
+                var table = $("#goods-table tbody");
+                table.empty();
+                if(goodsList.length){
+                    for (var i = 0; i < goodsList.length; i++) {
+                        var goods = goodsList[i];
+                        var row = "<tr>";
+                        row += "<td>" + goods._id + "</td>";
+                        row += "<td>" + goods.manufacturer + "</td>";
+                        row += "<td>" + goods.model + "</td>";
+                        row += "<td>" + goods.price + "</td>";
+                        row += "<td><button class='btn btn-primary edit-btn' data-id='" + goods._id + "'>Edit</button></td>";
+                        row += "<td><button class='btn btn-danger delete-btn' data-id='" + goods._id + "'>Delete</button></td>";
+                        row += "</tr>";
+                        table.append(row);
+                    }
+                }
+            },
+            error: function() {
+                alert("Failed to load goodsList");
+            }
+        });
+    }
+
+    $('#search').click(function (){
+        loadgoods();
+    })
+
+    // Clear form fields
+    function clearForm() {
+        $("#manufacturer").val("");
+        $("#model").val("");
+        $("#price").val("");
+    }
+
+    // Show form modal
+    function showFormModal(title, action, goods) {
+        $("#form-modal-title").text(title);
+        $("#form-modal-action").val(action);
+        if (goods) {
+            $("#id").val(goods._id);
+            $("#manufacturer").val(goods.manufacturer);
+            $("#model").val(goods.model);
+            $("#price").val(goods.price);
+        } else {
+            clearForm();
+        }
+        $("#form-modal").modal("show");
+    }
+
+    // Submit form data
+    function submitForm() {
+        var action = $("#form-modal-action").val();
+        var data = {
+            manufacturer: $("#manufacturer").val(),
+            model: $("#model").val(),
+            price: $("#price").val()
+        };
+        if (data.manufacturer == "" || data.model == "" || data.price == "") {
+            alert("Please fill in all required fields.");
+            return;
+        }
+        if (action === "create") {
+            $.ajax({
+                url: "/api/goods.php?action=create",
+                type: "POST",
+                data: data,
+                success: function(res) {
+                    var res = JSON.parse(res);
+                    if (res.code == 1){
+                        $("#form-modal").modal("hide");
+                        loadgoods();
+                    }else{
+                        alert(res.msg);
+                    }
+                },
+                error: function() {
+                    alert("Failed to create goods");
+                }
+            });
+        } else if (action === "update") {
+            data.id = $("#id").val();
+            $.ajax({
+                url: "/api/goods.php?action=update",
+                type: "POST",
+                data: data,
+                success: function(res) {
+                    var res = JSON.parse(res);
+                    if (res.code == 1){
+                        $("#form-modal").modal("hide");
+                        loadgoods();
+                    }else{
+                        alert(res.msg);
+                    }
+                },
+                error: function() {
+                    alert("Failed to update goods");
+                }
+            });
+        }
+    }
+
+    // Delete goods
+    function deleteGoods(id) {
+        $.ajax({
+            url: "/api/goods.php?action=delete",
+            type: "POST",
+            data: {id: id},
+            success: function() {
+                loadgoods();
+            },
+            error: function() {
+                alert("Failed to delete goods");
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        // Load goods on page load
+        loadgoods();
+
+        // Show create form modal
+        $("#create-btn").click(function() {
+            showFormModal("Create Goods", "create");
+        });
+
+        // Show edit form modal
+        $(document).on("click", ".edit-btn", function() {
+            var id = $(this).attr("data-id");
+            $.ajax({
+                url: "/api/goods.php?action=readOne",
+                type: "GET",
+                data: {id: id},
+                success: function(data) {
+                    var goods = JSON.parse(data);
+                    showFormModal("Edit Goods", "update", goods);
+                },
+                error: function() {
+                    alert("Failed to load goods");
+                }
+            });
+        });
+
+        // Submit form data
+        $("#form-submit-btn").click(function() {
+            submitForm();
+        });
+
+        // Delete goods
+        $(document).on("click", ".delete-btn", function() {
+            var id = $(this).attr("data-id");
+            if (confirm("Are you sure you want to delete this goods?")) {
+                deleteGoods(id);
+            }
+        });
+    });
+</script>
+<style>
+    .table-header {
+        float: left;
+        display: inline-block;
+        margin-right:30px;
+    }
+    .table-header-btn .btn {
+        margin-bottom: 10px;
+    }
+    .ui-button .ui-icon {
+        background-image: url('./static/close.jpg');
+    }
+</style>
+</html>
