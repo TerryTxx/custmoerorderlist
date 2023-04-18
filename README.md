@@ -1,4 +1,6 @@
+### All dependencies have been installed, monogo customer information has been removed, please insert your own information in the DB.ph file.
 
+------
 
 ### 1. For this assignment,you should use a MongoDB database to store the information for the user information...
 
